@@ -1,0 +1,4 @@
+{"label": "ollama-q8_0-64k-with-cvoice", "case": "short", "prompt_tokens": 6, "prefill_tps": 24.411082631514706, "gen_tokens": 256, "decode_tps": 14.31335135436453, "wall_s": 18.17}
+{"label": "ollama-q8_0-64k-with-cvoice", "case": "long", "prompt_tokens": 14859, "prefill_tps": 1070.7136505722146, "gen_tokens": 128, "decode_tps": 10.47259979262616, "wall_s": 26.22}
+{"label": "ollama-q8_0-64k-gpu-alone", "case": "short", "prompt_tokens": 6, "prefill_tps": 77.27278581271653, "gen_tokens": 256, "decode_tps": 43.86125724867243, "wall_s": 5.95}
+{"label": "ollama-q8_0-64k-gpu-alone", "case": "long", "prompt_tokens": 14859, "prefill_tps": 1885.2524638393504, "gen_tokens": 128, "decode_tps": 41.34577927426528, "wall_s": 11.06}

@@ -1,0 +1,4 @@
+speak_1 200 3.741091s
+speak_2 200 0.406321s
+speak_3 200 0.404511s
+speak_fully_cold 200 5.987017s

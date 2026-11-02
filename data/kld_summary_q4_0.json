@@ -1,0 +1,8 @@
+{
+  "type": "q4_0",
+  "vs": "f16",
+  "kld_mean": 0.008977812461584361,
+  "top1_agreement_pct": 85.0,
+  "delta_p_rms": 0.058128821078013315,
+  "n_prompts": 60
+}

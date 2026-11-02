@@ -1,0 +1,8 @@
+{
+  "type": "q8_0",
+  "vs": "f16",
+  "kld_mean": 0.0025139668459180516,
+  "top1_agreement_pct": 95.0,
+  "delta_p_rms": 0.03683170947048728,
+  "n_prompts": 60
+}

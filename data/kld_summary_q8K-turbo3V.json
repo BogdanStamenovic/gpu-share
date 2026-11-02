@@ -1,0 +1,8 @@
+{
+  "type": "q8K-turbo3V",
+  "vs": "f16",
+  "kld_mean": 0.01712651752340221,
+  "top1_agreement_pct": 85.0,
+  "delta_p_rms": 0.07782893233233994,
+  "n_prompts": 60
+}

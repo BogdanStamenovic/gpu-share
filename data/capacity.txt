@@ -1,0 +1,8 @@
+K=q8_0 V=q8_0 ctx=131072 up=yes kv=2176MiB vram_used=7656MiB 
+K=q8_0 V=q8_0 ctx=163840 up=no kv=2720MiB vram_used=2MiB cudaMalloc failed: out of memory
+K=q4_0 V=q4_0 ctx=262144 up=no kv=2304MiB vram_used=2MiB cudaMalloc failed: out of memory
+K=q4_0 V=q4_0 ctx=196608 up=yes kv=1728MiB vram_used=7332MiB 
+K=turbo4 V=turbo4 ctx=262144 up=no kv=2176.13MiB vram_used=2MiB cudaMalloc failed: out of memory
+K=q8_0 V=turbo3 ctx=262144 up=no kv=MiB vram_used=2MiB cudaMalloc failed: out of memory
+K=q4_0 V=turbo3 ctx=262144 up=yes kv=1952MiB vram_used=7742MiB 
+K=turbo3 V=turbo3 ctx=262144 up=yes kv=1600.13MiB vram_used=7390MiB 
