@@ -1,0 +1,194 @@
+<title>gpu-share: piccolo at full speed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#f5f7f5; --panel:#ffffff; --ink:#1c2220; --muted:#5b6662; --rule:#d8dfdb;
+  --accent:#0f6e66; --accent-soft:#d6ebe8; --warn:#a8620a; --warn-soft:#f6e6cf; --bad:#a3352b;
+  --bar-a:#0f6e66; --bar-b:#9aa7a2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#121715; --panel:#1a211e; --ink:#e4ebe7; --muted:#9aa8a2; --rule:#2c3632;
+    --accent:#4fbfb2; --accent-soft:#163b37; --warn:#e3a54f; --warn-soft:#3a2c16; --bad:#e07a6f;
+    --bar-a:#4fbfb2; --bar-b:#5d6a65;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#121715; --panel:#1a211e; --ink:#e4ebe7; --muted:#9aa8a2; --rule:#2c3632;
+  --accent:#4fbfb2; --accent-soft:#163b37; --warn:#e3a54f; --warn-soft:#3a2c16; --bad:#e07a6f;
+  --bar-a:#4fbfb2; --bar-b:#5d6a65;
+}
+body{background:var(--paper);color:var(--ink);font:15px/1.6 "IBM Plex Sans",system-ui,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding-inline:20px;padding-block:40px 64px;display:flex;flex-direction:column;gap:36px}
+h1,h2,h3{font-family:Archivo,"IBM Plex Sans",system-ui,sans-serif;text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:30px;font-weight:700}
+h2{font-size:20px;font-weight:700;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+h3{font-size:15px;font-weight:600}
+p{margin:0;max-width:68ch}
+section{display:flex;flex-direction:column;gap:14px}
+.eyebrow{font:500 12px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:17px;color:var(--ink)}
+.mono,code,td.n,th.n{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+code{font-size:.9em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font:500 26px/1.1 "IBM Plex Mono",monospace;color:var(--accent)}
+.kpi span{font-size:13px;color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+td.n,th.n{text-align:right}
+tr:last-child td{border-bottom:0}
+tr.hl td{background:var(--accent-soft)}
+.chart{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:14px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.chart text{font-family:"IBM Plex Mono",monospace;font-size:12px;fill:var(--ink)}
+.chart .lab{fill:var(--muted)}
+.chart .grid{stroke:var(--rule);stroke-width:1}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:12px 14px;border-radius:0 6px 6px 0}
+ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:72ch}
+.diagram{font:13px/1.5 "IBM Plex Mono",monospace;background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;overflow-x:auto;white-space:pre;margin:0}
+footer{color:var(--muted);font-size:13px}
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:10px">
+  <div class="eyebrow">archserver · RTX 4060 8 GiB · 2026-11-02</div>
+  <h1>Why piccolo-gorgone was slow, and what gpu-share changed</h1>
+  <p class="lede">piccolo-gorgone was decoding at 10–14 tok/s because cvoiced held 2.4 GB of VRAM, which forced ollama to put 15 of its 33 layers on the CPU. A new broker on ollama's port now makes cvoiced give the card back before any model load and protects live calls. It also serves piccolo through the turbo3 llama.cpp fork at a 262k context.</p>
+</header>
+
+<div class="kpis">
+  <div class="kpi"><b>14.3 → 43.9</b><span>tok/s decode, split vs fully on GPU (stock ollama, 64k)</span></div>
+  <div class="kpi"><b>64k → 262k</b><span>context for piccolo, turbo3 KV, 7.4–7.7 GB used</span></div>
+  <div class="kpi"><b>0.0246</b><span>KLD vs f16 KV for turbo3 (q8_0: 0.0025): the cost</span></div>
+  <div class="kpi"><b>46 ms</b><span>call lease begin; the LLM is evicted within 1 s</span></div>
+</div>
+
+<section>
+  <h2>1. The cause, measured</h2>
+  <p>Same prompts, temperature 0, ollama q8_0 KV at 64k context. The only change is whether cvoiced was resident. piccolo alone at 64k uses 6454 MiB, so the two never fit together at any useful context.</p>
+  <div class="chart" role="img" aria-label="Decode speed in tokens per second">
+    <svg viewBox="0 0 640 250">
+      <!-- scale: x0=200, 8 px per tok/s, 0..50 -->
+      <g class="grid">
+        <line x1="200" y1="10" x2="200" y2="220"/><line x1="280" y1="10" x2="280" y2="220"/>
+        <line x1="360" y1="10" x2="360" y2="220"/><line x1="440" y1="10" x2="440" y2="220"/>
+        <line x1="520" y1="10" x2="520" y2="220"/><line x1="600" y1="10" x2="600" y2="220"/>
+      </g>
+      <text class="lab" x="200" y="240" text-anchor="middle">0</text><text class="lab" x="280" y="240" text-anchor="middle">10</text>
+      <text class="lab" x="360" y="240" text-anchor="middle">20</text><text class="lab" x="440" y="240" text-anchor="middle">30</text>
+      <text class="lab" x="520" y="240" text-anchor="middle">40</text><text class="lab" x="600" y="240" text-anchor="middle">50 tok/s</text>
+
+      <text x="190" y="31" text-anchor="end">split, short prompt</text>
+      <rect x="200" y="18" width="114.4" height="20" fill="var(--bar-b)"/><text x="320" y="33">14.3</text>
+      <text x="190" y="65" text-anchor="end">split, 15k prompt</text>
+      <rect x="200" y="52" width="84" height="20" fill="var(--bar-b)"/><text x="290" y="67">10.5</text>
+      <text x="190" y="99" text-anchor="end">GPU alone, short</text>
+      <rect x="200" y="86" width="351.2" height="20" fill="var(--bar-a)"/><text x="557" y="101">43.9</text>
+      <text x="190" y="133" text-anchor="end">GPU alone, 15k</text>
+      <rect x="200" y="120" width="330.4" height="20" fill="var(--bar-a)"/><text x="536" y="135">41.3</text>
+      <text x="190" y="167" text-anchor="end">turbo3 262k, short</text>
+      <rect x="200" y="154" width="338.4" height="20" fill="var(--bar-a)"/><text x="544" y="169">42.3</text>
+      <text x="190" y="201" text-anchor="end">turbo3, 90k prompt</text>
+      <rect x="200" y="188" width="242.4" height="20" fill="var(--bar-a)"/><text x="448" y="203">30.3</text>
+    </svg>
+  </div>
+  <p>Ollama's own logs from the previous 14 days agree: 33/33 layers ran at ~40 tok/s, 25/33 at 8.3, and 18/33 at 11.5. Ollama evicts its <em>own</em> models when it needs room, but it cannot evict another process, and nothing else on the box could either.</p>
+</section>
+
+<section>
+  <h2>2. The turbo3 fork: more context, at a price</h2>
+  <p>"turbo3 cuda fork" is <code>~/data/llama-turbo3</code>: Madreag/turbo3-cuda (from TheTom/llama-cpp-turboquant), forked to BogdanStamenovic/turbo3-cuda with a CUDA 13 build fix. It was already built here. Its speed and quality had never been measured.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>KV cache K/V</th><th class="n">Max ctx on 8 GB</th><th class="n">VRAM</th><th class="n">Decode @0 / @16k</th><th class="n">KLD vs f16</th><th class="n">Top-1</th></tr></thead>
+    <tbody>
+      <tr><td>f16</td><td class="n">&lt;128k</td><td class="n">—</td><td class="n">44.2 / 40.9</td><td class="n">0</td><td class="n">100%</td></tr>
+      <tr><td>q8_0</td><td class="n">128k</td><td class="n">7656 MiB</td><td class="n">43.9 / 41.1</td><td class="n">0.0025</td><td class="n">95%</td></tr>
+      <tr><td>q4_0</td><td class="n">192k</td><td class="n">7332 MiB</td><td class="n">—</td><td class="n">0.0090</td><td class="n">85%</td></tr>
+      <tr><td>q8_0 / turbo3</td><td class="n">&lt;262k</td><td class="n">—</td><td class="n">—</td><td class="n">0.0171</td><td class="n">85%</td></tr>
+      <tr><td>turbo4</td><td class="n">&lt;262k</td><td class="n">—</td><td class="n">—</td><td class="n">0.0213</td><td class="n">85%</td></tr>
+      <tr class="hl"><td>turbo3</td><td class="n">262k</td><td class="n">7384 (7746 peak)</td><td class="n">43.8 / 39.1</td><td class="n">0.0246</td><td class="n">80%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="chart" role="img" aria-label="KL divergence against f16 KV cache, lower is better">
+    <svg viewBox="0 0 640 200">
+      <!-- scale: x0=200, 13333 px per unit, 0..0.03 -> 400 px -->
+      <g class="grid">
+        <line x1="200" y1="8" x2="200" y2="172"/><line x1="333.3" y1="8" x2="333.3" y2="172"/>
+        <line x1="466.7" y1="8" x2="466.7" y2="172"/><line x1="600" y1="8" x2="600" y2="172"/>
+      </g>
+      <text class="lab" x="200" y="190" text-anchor="middle">0</text><text class="lab" x="333.3" y="190" text-anchor="middle">0.01</text>
+      <text class="lab" x="466.7" y="190" text-anchor="middle">0.02</text><text class="lab" x="600" y="190" text-anchor="middle">0.03 KLD</text>
+      <text x="190" y="29" text-anchor="end">q8_0</text>
+      <rect x="200" y="16" width="33.3" height="20" fill="var(--bar-b)"/><text x="239" y="31">0.0025</text>
+      <text x="190" y="61" text-anchor="end">q4_0</text>
+      <rect x="200" y="48" width="120" height="20" fill="var(--bar-b)"/><text x="326" y="63">0.0090</text>
+      <text x="190" y="93" text-anchor="end">q8_0 K / turbo3 V</text>
+      <rect x="200" y="80" width="228" height="20" fill="var(--bar-b)"/><text x="434" y="95">0.0171</text>
+      <text x="190" y="125" text-anchor="end">turbo4</text>
+      <rect x="200" y="112" width="284" height="20" fill="var(--bar-b)"/><text x="490" y="127">0.0213</text>
+      <text x="190" y="157" text-anchor="end">turbo3</text>
+      <rect x="200" y="144" width="328" height="20" fill="var(--warn)"/><text x="534" y="159">0.0246</text>
+    </svg>
+  </div>
+  <div class="note"><p><strong>Read this as a screen, not a verdict.</strong> These numbers come from the fork's own <code>kl_divergence.py</code>: top-10 logprobs on the next token, over 60 wikitext-2 prompts of ~2k tokens. An f16-vs-f16 rerun gives exactly 0, so the gaps are real and not noise. Still, n is small, the context is short, and top-k is an approximation. What they say: turbo3 is the only setting that reaches 262k, at ≤5% speed cost, but its error is about 10× that of q8_0 and worse than plain q4_0.</p></div>
+  <p>Because of that, there are two names. <code>piccolo-gorgone:9b</code> serves turbo3 @262144, which is what he asked for. <code>piccolo-gorgone:9b-q8</code> serves q8_0 @131072, twice the old 64k and near-lossless. Which name is the default is his decision, and changing it is one config line.</p>
+  <p>Dead ends: q4_0-K + turbo3-V does fit 262k, but it deadlocks during prefill (GPU at 0% for 10 min). q8_0-K + q4_0-V runs only on a slow path.</p>
+</section>
+
+<section>
+  <h2>3. What was built</h2>
+<pre class="diagram">clients (OpenHands on the tailnet, local agents, hotline-calld)
+        │  :11434
+        ▼
+   gpu-share ── /v1/* for piccolo ──► turbo3 llama-server (child process, :11436)
+        │   └── everything else ────► ollama (moved to 127.0.0.1:11435)
+        ├─ before a load: snapshot VRAM; evict cvoiced first, then idle LLMs
+        ├─ call lease from hotline-calld: 5.1 GB reserved from ring to hang-up
+        └─ every 5 s: poll call health, stop an idle llama-server,
+           evict an ollama model left split across CPU and GPU</pre>
+  <ul>
+    <li><strong>cvoiced yields by exiting</strong> through the new <code>POST /yield</code> (cvoice a9b5f5d). It waits for open requests and websockets, frees all 2408 MiB, and systemd brings it back empty at 0 MiB in 6.8 s. <code>/unload</code> is not used because it leaks ~780 MB per cycle.</li>
+    <li><strong>In the request path, not a watcher.</strong> Ollama picks its layer split at load time, so the yield has to happen <em>before</em> the load. A watcher on <code>/api/ps</code> only sees the split after it has already happened.</li>
+    <li><strong>Calls outrank LLMs.</strong> During a lease, a load that doesn't fit beside the call's budget is held rather than split, and gets a 503 after 120 s. The call may evict an in-flight LLM; an LLM never evicts another LLM's in-flight request. hotline-calld (c8d3720, manager-6) sends begin/renew/end; a health poll backs that up.</li>
+    <li><strong>It degrades rather than fails.</strong> Without nvidia-smi, requests are forwarded unmanaged. Without llama-server, routed models fall back to stock ollama.</li>
+    <li><strong>On the ownbox shelf.</strong> gpu-share and cvoice both install, update and remove through ownbox with the full lifecycle, and each was exercised live. <code>gpu-share-frontdoor on|off</code> moves ollama behind the broker and back.</li>
+  </ul>
+  <div class="tbl"><table>
+    <thead><tr><th>Exercised on the 4060</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>piccolo cold start through the broker</td><td class="mono">cvoiced yields → turbo3 ready 5.0 s → 42.3 tok/s</td></tr>
+      <tr><td>tool calling (llama-server --jinja)</td><td class="mono">correct get_weather call</td></tr>
+      <tr><td>89,845-token prompt</td><td class="mono">prefill 1444 tok/s, decode 30.3, correct answer</td></tr>
+      <tr><td>call begin / held load / call end</td><td class="mono">46 ms; evicted &lt;1 s; served 3.1 s after end</td></tr>
+      <tr><td>profile switch to q8_0 128k</td><td class="mono">2.1 s, 42.5 tok/s, 7650 MiB</td></tr>
+      <tr><td>split repair</td><td class="mono">4299/7126 MiB split model evicted 5 s after room appeared</td></tr>
+      <tr><td>front door live on :11434</td><td class="mono">~3 s cutover; tags/models unchanged; bge-m3 embed 6–10 ms</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>4. What it costs calls</h2>
+  <p>A yielded cvoiced has to load again: 0.8 s for the process plus 8.0 s for the model. A fully cold <code>/speak</code> takes 6.0 s; a warm one takes 0.4 s. hotline-calld already sends <code>/load</code> at ring time, so a call answered after about 9 s of ringing hears no delay. An inbound call answered automatically at 1.5 s may hear a few seconds of silence before the first word, if an LLM had the card just before.</p>
+</section>
+
+<section>
+  <h2>5. Limitations</h2>
+  <ul>
+    <li>Ollama-native <code>/api/chat</code> and <code>/api/generate</code> for piccolo still go to stock ollama (64k, q8_0), because no protocol translator exists yet. OpenHands uses <code>/v1</code>, so it gets turbo3.</li>
+    <li>llama-server returns <code>reasoning_content</code> where ollama's /v1 returned <code>reasoning</code>. litellm reads the former.</li>
+    <li>Only calls are protected. A batch cvoiced user (kiri-wake, standin) that loads while an LLM holds 7.7 GB falls back to CPU: slow, but it still works.</li>
+    <li>One llama-server profile runs at a time; switching costs 2–5 s. Restarting the broker (including during <code>ownbox update</code>) drops any in-flight turbo request.</li>
+    <li>turbo3 at 262k leaves ~440 MiB spare at peak, so <code>-np</code> &gt; 1 will not fit.</li>
+    <li>VRAM needs for ollama models are estimated until each has been seen fully loaded once.</li>
+  </ul>
+</section>
+
+<footer>Repo: BogdanStamenovic/gpu-share (private). Also cvoice a9b5f5d / 6ed3f18, hotline-call c8d3720. Raw data is in <code>data/</code>; the full run order, including dead ends, is in LOG.md.</footer>
+</div>
