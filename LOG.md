@@ -100,3 +100,13 @@ Controlled runs, bench/ollama_tps.py, temp 0, seed 1, raw prompts. data/bench-ol
   /v1/chat/completions: correct, 42.3 tok/s via turbo3 (the start evicted idle bge-m3; ready 2.3 s).
 - Device map: claimed archserver/gpu-share (unit gpu-share.service), verified.
 - Asked manager-6 for a round trip through hotline-calld's own client on :11434.
+
+## 17:25 Wrap-up
+- cvoice d44f672 (subagent): the installer prints the token's location, not its value (`--show-token`
+  to show it). Rolled out with `ownbox update cvoice --yes` (no live call). The captured output
+  contains no token (grep count 0). The token was printed once earlier, in the first ownbox
+  install's output in this session's transcript; it never left the machine. Rotating it is optional,
+  and the broker reads it fresh from config.toml on every yield.
+- manager-6 verified the lease through hotline-calld's own client on :11434: begin 56 ms,
+  VRAM 7392 -> 2 MiB in 4 s, renew/end OK, bge-m3 embed OK.
+- Report published: https://claude.ai/artifact/M2dXnVNrndfKRULptyBgcL
