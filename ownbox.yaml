@@ -1,0 +1,17 @@
+schema: 1
+name: gpu-share
+description: GPU admission front door on ollama's port. Makes cvoiced yield VRAM to LLM loads, reserves the GPU for live calls, and serves chosen models through the turbo3 llama.cpp fork for longer context.
+tags: [gpu, ollama, llama.cpp, vram, turboquant, cvoice, hotline]
+install:
+  platforms: [linux]
+  setup:
+    linux: [scripts/lifecycle.sh setup]
+  update:
+    linux: [scripts/lifecycle.sh update]
+  remove:
+    linux: [scripts/lifecycle.sh remove]
+commands:
+  gpu-share:
+    linux: bin/gpu-share
+  gpu-share-frontdoor:
+    linux: scripts/frontdoor.sh

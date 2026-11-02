@@ -1,0 +1,15 @@
+[Unit]
+Description=gpu-share: GPU admission front door for ollama, the turbo3 llama-server and cvoiced
+After=network-online.target
+
+[Service]
+ExecStart=@TOOL_DIR@/bin/gpu-share -config %h/.config/gpu-share/config.json serve
+Restart=on-failure
+RestartSec=3
+# The turbo llama-server is a child; stopping the broker must stop it too, or
+# 7 GB of VRAM stays held by a process nobody manages.
+KillMode=control-group
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
