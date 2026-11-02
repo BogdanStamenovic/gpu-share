@@ -1,0 +1,1 @@
+['bge-m3:latest', 'goekdenizguelmez/JOSIEFIED-Qwen3:8b', 'hf.co/CorryL/piccolo_gorgone:latest', 'piccolo-gorgone:9b', 'piccolo-gorgone:9b-q8', 'qwen2.5-coder:14b', 'qwen2.5:0.5b', 'qwen2.5:1.5b', 'qwen3-vl:8b-instruct', 'qwen3:8b']

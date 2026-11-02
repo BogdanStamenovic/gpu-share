@@ -1,0 +1,2 @@
+/home/bodas/.config/gpu-share/config.json: front mode
+front door on: :11434 -> gpu-share -> ollama :11435

@@ -1,0 +1,5 @@
+would: sudo install -m 0644 /home/bodas/.local/share/ownbox/tools/gpu-share/systemd/ollama-40-gpu-share.conf /etc/systemd/system/ollama.service.d/40-gpu-share.conf
+would: sudo systemctl daemon-reload
+would: sudo systemctl restart ollama
+would: set /home/bodas/.config/gpu-share/config.json to front mode
+would: systemctl --user restart gpu-share.service

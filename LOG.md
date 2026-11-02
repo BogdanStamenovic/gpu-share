@@ -89,3 +89,14 @@ Controlled runs, bench/ollama_tps.py, temp 0, seed 1, raw prompts. data/bench-ol
 - Found: ownbox does not export OWNBOX_TOOL_DIR to lifecycle commands; lifecycle.sh
   falls back to its own location.
 - Asked hotline-80 for the :11434 front-door move with the exact diff.
+
+## 17:18 Front door on (approved by hotline-80, with conditions)
+- Dry run saved: data/frontdoor-dryrun.txt. 8792/health just before: inCall False, active_calls 0.
+- `gpu-share-frontdoor on` 17:18:24 -> 17:18:27 (~3 s with no ollama). The broker owns *:11434;
+  ollama is on 127.0.0.1:11435 via /etc/systemd/system/ollama.service.d/40-gpu-share.conf.
+- Checked from the tailnet address 100.72.2.62:11434: /api/tags and /v1/models match the
+  before lists (data/frontdoor-*-*.txt), plus the alias piccolo-gorgone:9b-q8. bge-m3 /api/embed:
+  2.16 s cold (ollama had just restarted), then 9.6 ms on ::1 and 6.5 ms on 127.0.0.1. piccolo
+  /v1/chat/completions: correct, 42.3 tok/s via turbo3 (the start evicted idle bge-m3; ready 2.3 s).
+- Device map: claimed archserver/gpu-share (unit gpu-share.service), verified.
+- Asked manager-6 for a round trip through hotline-calld's own client on :11434.
