@@ -53,3 +53,39 @@ Controlled runs, bench/ollama_tps.py, temp 0, seed 1, raw prompts. data/bench-ol
   begin must return within ~1 s and evict in the background. Backstop: poll 8792/health.
 - hotline-80: the broker plan is approved. Putting cvoice on the ownbox shelf is required.
   The KV default is Bogdan's call (put to him). Moving ollama to :11435 comes back as an ask with the diff.
+
+## 17:00-17:20 Broker build
+- Chose Go, stdlib only: a long-running streaming proxy with no venv (the disks were
+  reported full at the time) and one binary for ownbox to build.
+- Planner is a pure function (internal/broker/plan.go) with 8 unit tests, so the
+  policy is testable without a GPU and `gpu-share plan` can show it without acting.
+- Dead end: the zsh word-split trap a third time (`$G status` with G holding a command
+  plus flags). Ran the commands literally.
+- Delegated cvoice /yield + ownbox shelving to an Opus subagent (reports to me).
+  Result: cvoice a9b5f5d (/yield), 6ed3f18 (lifecycle). Empty cvoiced = 0 MiB.
+  /yield: 2408 MiB released, back in 6.8 s. It found and fixed: the old remove deleting
+  profiles and the token unasked, and an unattended install defaulting to the client role.
+
+## 17:09-17:14 GPU window 2 (granted by hotline-80): end to end on a side port 127.0.0.1:11437
+- piccolo /v1 cold: cvoiced restarted (/yield not deployed yet) -> turbo3 @262k ready
+  5.0 s -> 42.3 tok/s decode, 7384 MiB. 15.1 s wall including the cold start.
+- Tool call through llama-server --jinja: correct get_weather call.
+- 89,845-token prompt: prefill 1444 tok/s, decode 30.3 tok/s, correct answer, peak
+  7746 MiB, so the profile MiB was raised from 7400 to 7750.
+- call begin 46 ms -> turbo evicted within 1 s -> a piccolo request held for 10 s -> call end
+  -> loaded 3.1 s, served.
+- Profile switch to q8_0 @128k: 2.1 s, 42.5 tok/s, 7650 MiB.
+- An ollama model load evicted the idle llama-server.
+- Split repair: piccolo loaded straight into ollama beside cvoiced (4299/7126 MiB on GPU).
+  After cvoiced left, the reconciler evicted it within 5 s.
+- Idle stop after keep_alive (15 s test).
+- Added: fallback to stock ollama if llama-server cannot start.
+
+## 17:16 ownbox
+- `ownbox install gpu-share --yes`: built, unit installed and started on the side port
+  (no TTY, so the front-door step was skipped and printed). `ownbox update --yes` on a
+  populated config: kept, restarted. `ownbox uninstall --yes`: unit gone, config kept;
+  reinstalled after.
+- Found: ownbox does not export OWNBOX_TOOL_DIR to lifecycle commands; lifecycle.sh
+  falls back to its own location.
+- Asked hotline-80 for the :11434 front-door move with the exact diff.
