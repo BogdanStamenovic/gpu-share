@@ -85,7 +85,21 @@ func Default() Config {
 		Profiles: map[string]Profile{
 			// Measured 2026-11-02 on the RTX 4060: 7384 MiB after load, 7746 MiB peak with a
 			// 90k-token prompt (compute buffers grow). KLD vs f16 KV 0.0246.
-			"piccolo-turbo3-262k": {OllamaModel: "piccolo-gorgone:9b", Ctx: 262144, CacheK: "turbo3", CacheV: "turbo3", MiB: 7750},
+			//
+			// -ub 256 since 2026-11-03. With the default ubatch this profile aborted six
+			// times in 13 min under piccolo-bench (ggml_cuda_error <- pool_vmm alloc <-
+			// launch_fattn: no VRAM left for the attention buffer), about 140 MiB of
+			// headroom on a 7888 MiB card. bench/fit.py, same prompts, standalone:
+			//   default ub  22.9k tok 7484 MiB 1871 t/s | 94.4k tok 7764 MiB 1422 t/s
+			//   -ub 256     22.9k tok 7084 MiB 1824 t/s | 94.4k tok 7364 MiB 1377 t/s
+			//   -c 196608   22.9k tok 6892 MiB 1850 t/s | 94.4k tok 7172 MiB 1413 t/s
+			// -ub 256 buys 400 MiB for ~3% prompt speed and keeps the 262k context;
+			// the smaller context is his call, not made here. Neither the single long
+			// prompt nor a 60-turn cached conversation reproduced the abort standalone,
+			// so this is margin, not a proven cure; llama-server logs now keep the
+			// error text if it happens again.
+			"piccolo-turbo3-262k": {OllamaModel: "piccolo-gorgone:9b", Ctx: 262144, CacheK: "turbo3", CacheV: "turbo3", MiB: 7400,
+				ExtraArgs: []string{"-ub", "256"}},
 			// 7656 MiB used, KLD 0.0025.
 			"piccolo-q8-128k": {OllamaModel: "piccolo-gorgone:9b", Ctx: 131072, CacheK: "q8_0", CacheV: "q8_0", MiB: 7660},
 		},
