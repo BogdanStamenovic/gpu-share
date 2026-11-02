@@ -1,6 +1,11 @@
 package broker
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func names(p Plan) []string {
 	var s []string
@@ -102,5 +107,21 @@ func TestTargetIsNeverEvicted(t *testing.T) {
 		NeedMiB: 7400, TargetKey: "turbo:piccolo"})
 	if len(p.Actions) != 0 {
 		t.Fatalf("got %v", names(p))
+	}
+}
+
+func TestServerLogAppendsAcrossStarts(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "llama-server-x.log")
+	for _, line := range []string{"first run: CUDA error: out of memory\n", "second run\n"} {
+		f, err := openServerLog(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.WriteString(line)
+		f.Close()
+	}
+	b, _ := os.ReadFile(path)
+	if !strings.Contains(string(b), "CUDA error: out of memory") || !strings.Contains(string(b), "second run") {
+		t.Fatalf("a restart erased the previous run's log:\n%s", b)
 	}
 }

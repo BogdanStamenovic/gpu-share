@@ -6,6 +6,12 @@ After=network-online.target
 ExecStart=@TOOL_DIR@/bin/gpu-share -config %h/.config/gpu-share/config.json serve
 Restart=on-failure
 RestartSec=3
+# No core dumps. The turbo3 llama-server child runs as part of this unit, and on
+# 2026-11-03 each of its CUDA aborts wrote an ~890 MB core to a root disk with a
+# few GB free: three of them filled it (ENOSPC 00:09:50) and tore other agents'
+# transcript writes. The stack trace still reaches the journal via
+# systemd-coredump, which is all that was ever read from them.
+LimitCORE=0
 # The turbo llama-server is a child; stopping the broker must stop it too, or
 # 7 GB of VRAM stays held by a process nobody manages.
 KillMode=control-group

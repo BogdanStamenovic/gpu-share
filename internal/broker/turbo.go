@@ -71,6 +71,25 @@ func (t *Turbo) Args(name string, p Profile, aliases []string) ([]string, error)
 	return append(args, p.ExtraArgs...), nil
 }
 
+// serverLogMax is when a profile's log is rotated to .1 (one generation kept).
+const serverLogMax = 32 << 20
+
+// openServerLog appends rather than truncates. os.Create here erased each
+// crash's own CUDA error the moment the broker restarted the server
+// (2026-11-03: six aborts, no error text left), so a restart now adds a header
+// and keeps what came before; one rotated generation bounds the size.
+func openServerLog(path string) (*os.File, error) {
+	if st, err := os.Stat(path); err == nil && st.Size() > serverLogMax {
+		_ = os.Rename(path, path+".1")
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Fprintf(f, "\n===== gpu-share: llama-server start %s =====\n", time.Now().Format(time.RFC3339))
+	return f, nil
+}
+
 // Start launches the profile and waits until /health answers 200.
 func (t *Turbo) Start(ctx context.Context, name string, p Profile, aliases []string) error {
 	args, err := t.Args(name, p, aliases)
@@ -80,7 +99,7 @@ func (t *Turbo) Start(ctx context.Context, name string, p Profile, aliases []str
 	if err := os.MkdirAll(t.StateDir, 0o755); err != nil {
 		return err
 	}
-	logf, err := os.Create(filepath.Join(t.StateDir, "llama-server-"+name+".log"))
+	logf, err := openServerLog(filepath.Join(t.StateDir, "llama-server-"+name+".log"))
 	if err != nil {
 		return err
 	}
