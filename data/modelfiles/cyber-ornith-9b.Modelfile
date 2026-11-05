@@ -1,0 +1,11 @@
+# Hermes-tuned qwen35 9B, same base and architecture as piccolo-gorgone.
+# Template comes from the GGUF (gguf_chat_template); sampling copied from piccolo.
+FROM /mnt/offload/manager-13-bench/models/cyber-ornith-1.5-9b-Q4_K_M.gguf
+PARAMETER top_k 20
+PARAMETER top_p 0.95
+PARAMETER min_p 0
+PARAMETER num_ctx 65536
+PARAMETER presence_penalty 1.5
+PARAMETER repeat_last_n 64
+PARAMETER repeat_penalty 1
+PARAMETER temperature 1

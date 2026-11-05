@@ -83,28 +83,42 @@ type manifest struct {
 	} `json:"layers"`
 }
 
-func (o *Ollama) manifestPath(model string) string {
+// manifestPaths lists where a model's manifest can live, newest layout first.
+// Ollama 0.40 writes new manifests under manifests-v2/ollama.com/... but does
+// not migrate models pulled earlier, which stay under
+// manifests/registry.ollama.ai/... Both layouts are live in the same store.
+func (o *Ollama) manifestPaths(model string) []string {
 	name, tag, ok := strings.Cut(model, ":")
 	if !ok {
 		tag = "latest"
 	}
 	parts := strings.Split(name, "/")
-	switch len(parts) {
-	case 1:
-		parts = []string{"registry.ollama.ai", "library", parts[0]}
-	case 2:
-		parts = []string{"registry.ollama.ai", parts[0], parts[1]}
+	if len(parts) == 1 {
+		parts = []string{"library", parts[0]}
 	}
-	return filepath.Join(append([]string{o.ModelsDir, "manifests"}, append(parts, tag)...)...)
+	join := func(root, host string) string {
+		p := []string{o.ModelsDir, root}
+		if host != "" {
+			p = append(p, host)
+		}
+		return filepath.Join(append(append(p, parts...), tag)...)
+	}
+	if len(parts) == 2 {
+		return []string{join("manifests-v2", "ollama.com"), join("manifests", "registry.ollama.ai")}
+	}
+	return []string{join("manifests-v2", ""), join("manifests", "")} // host is in the name (hf.co/...)
 }
 
 func (o *Ollama) readManifest(model string) (manifest, error) {
 	var m manifest
-	b, err := os.ReadFile(o.manifestPath(model))
-	if err != nil {
-		return m, err
+	var err error
+	for _, p := range o.manifestPaths(model) {
+		var b []byte
+		if b, err = os.ReadFile(p); err == nil {
+			return m, json.Unmarshal(b, &m)
+		}
 	}
-	return m, json.Unmarshal(b, &m)
+	return m, err
 }
 
 func blobPath(dir, digest string) string {
